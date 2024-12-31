@@ -279,15 +279,23 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 
 	if args.Term < rf.currentTerm {
 		reply.Term = rf.currentTerm
-		reply.VoteGranted = true
+		reply.VoteGranted = false
 		return
 	}
 	//if args.Term == rf.currentTerm, it may elect other candidates, so dont vote
 	if args.Term > rf.currentTerm {
 		rf.votedFor = -1
+		rf.currentTerm = args.Term
+		rf.state = follower
 	}
 
-	if (rf.votedFor == -1 || rf.votedFor == args.CandidateId) && (args.LastLogTerm > rf.log[len(rf.log)-1].Term || args.LastLogTerm == rf.log[len(rf.log)-1].Term && args.LastlogIndex >= len(rf.log)-1) {
+	lastLogIndex := len(rf.log) - 1
+	lastLogTerm := 0
+	if lastLogIndex >= 0 {
+		lastLogTerm = rf.log[lastLogIndex].Term
+	}
+
+	if (rf.votedFor == -1 || rf.votedFor == args.CandidateId) && (args.LastLogTerm > lastLogTerm || args.LastLogTerm == lastLogTerm && args.LastlogIndex >= lastLogIndex) {
 		rf.currentTerm = args.Term
 		rf.votedFor = args.CandidateId
 		rf.state = follower
