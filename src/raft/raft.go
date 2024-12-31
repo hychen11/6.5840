@@ -424,7 +424,6 @@ func (rf *Raft) elect() {
 	rf.currentTerm++
 	rf.state = candidate
 	rf.votedFor = rf.me
-	rf.voteCnt = 1
 	rf.timestamp = time.Now()
 
 	args := RequestVoteArgs{
@@ -434,6 +433,10 @@ func (rf *Raft) elect() {
 		LastLogTerm:  rf.getLastLogTerm(),
 	}
 	rf.mu.Unlock()
+
+	rf.muVote.Lock()
+	rf.voteCnt = 1
+	rf.muVote.Unlock()
 
 	for i := 0; i < len(rf.peers); i++ {
 		if i == rf.me {
@@ -466,11 +469,13 @@ func (rf *Raft) elect() {
 				rf.muVote.Lock()
 				rf.voteCnt++
 				DPrintf("vote cnt is %v", rf.voteCnt)
+				rf.mu.Lock()
 				if rf.voteCnt > len(rf.peers)/2 && rf.state == candidate {
-					rf.mu.Lock()
 					rf.state = leader
 					rf.mu.Unlock()
 					go rf.SendHeartbeat()
+				} else {
+					rf.mu.Unlock()
 				}
 				rf.muVote.Unlock()
 			}
