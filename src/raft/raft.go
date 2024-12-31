@@ -287,7 +287,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		rf.votedFor = -1
 	}
 
-	if rf.votedFor == -1 || (rf.votedFor == args.CandidateId && (args.LastLogTerm > rf.log[len(rf.log)-1].Term || args.LastLogTerm == rf.log[len(rf.log)-1].Term && args.LastlogIndex >= len(rf.log))) {
+	if (rf.votedFor == -1 || rf.votedFor == args.CandidateId) && (args.LastLogTerm > rf.log[len(rf.log)-1].Term || args.LastLogTerm == rf.log[len(rf.log)-1].Term && args.LastlogIndex >= len(rf.log)-1) {
 		rf.currentTerm = args.Term
 		rf.votedFor = args.CandidateId
 		rf.state = follower
