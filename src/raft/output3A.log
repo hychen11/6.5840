@@ -1,6 +1,14 @@
 === RUN   TestInitialElection3A
 Test (3A): initial election ...
-warning: term changed even though there were no failures  ... Passed --   3.5  3   54   12634    0
---- PASS: TestInitialElection3A (3.51s)
+  ... Passed --   3.5  3   42   10398    0
+--- PASS: TestInitialElection3A (3.55s)
 === RUN   TestReElection3A
 Test (3A): election after network failure ...
+  ... Passed --   5.4  3   92   17396    0
+--- PASS: TestReElection3A (5.42s)
+=== RUN   TestManyElections3A
+Test (3A): multiple elections ...
+  ... Passed --   6.8  7  420   81844    0
+--- PASS: TestManyElections3A (6.82s)
+PASS
+ok  	6.5840/raft	17.146s
