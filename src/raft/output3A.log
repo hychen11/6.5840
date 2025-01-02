@@ -1,14 +1,14 @@
 === RUN   TestInitialElection3A
 Test (3A): initial election ...
   ... Passed --   3.5  3   42   10398    0
---- PASS: TestInitialElection3A (3.55s)
+--- PASS: TestInitialElection3A (3.54s)
 === RUN   TestReElection3A
 Test (3A): election after network failure ...
-  ... Passed --   5.4  3   92   17396    0
---- PASS: TestReElection3A (5.42s)
+  ... Passed --   5.8  3  100   18980    0
+--- PASS: TestReElection3A (5.84s)
 === RUN   TestManyElections3A
 Test (3A): multiple elections ...
-  ... Passed --   6.8  7  420   81844    0
---- PASS: TestManyElections3A (6.82s)
+  ... Passed --   7.0  7  432   81898    0
+--- PASS: TestManyElections3A (7.04s)
 PASS
-ok  	6.5840/raft	17.146s
+ok  	6.5840/raft	17.777s

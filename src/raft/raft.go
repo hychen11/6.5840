@@ -111,83 +111,82 @@ func (rf *Raft) SendHeartbeat() {
 			rf.mu.Unlock()
 			return
 		}
-		//leader nextIndex and matchIndex can be the latest log
-		rf.nextIndex[rf.me] = len(rf.log)
-		rf.matchIndex[rf.me] = rf.nextIndex[rf.me] - 1
-		rf.mu.Unlock()
+		////leader nextIndex and matchIndex can be the latest log
+		//rf.nextIndex[rf.me] = len(rf.log)
+		//rf.matchIndex[rf.me] = rf.nextIndex[rf.me] - 1
 
 		for i := 0; i < len(rf.peers); i++ {
 			if i == rf.me {
 				continue
 			}
-
-			go func(server int) {
-				reply := AppendEntriesReply{}
-				rf.mu.Lock()
-				args := AppendEntriesArgs{
-					Term:         rf.currentTerm,
-					LeaderId:     rf.me,
-					PrevLogIndex: rf.nextIndex[server] - 1,
-					PrevLogTerm:  rf.log[rf.nextIndex[server]-1].Term,
-					LeaderCommit: rf.commitIndex,
-				}
-				//have new append log
-				if len(rf.log)-1 >= rf.nextIndex[server] {
-					args.Entries = rf.log[rf.nextIndex[server]:]
-				} else {
-					args.Entries = nil
-				}
-				rf.mu.Unlock()
-
-				ok := rf.SendAppendEntries(server, &args, &reply)
-				if ok {
-					rf.mu.Lock()
-					defer rf.mu.Unlock()
-					if args.Term != rf.currentTerm {
-						return
-					}
-					if reply.Term > rf.currentTerm {
-						rf.currentTerm = reply.Term
-						rf.votedFor = -1
-						rf.state = follower
-						rf.timestamp = time.Now()
-						return
-					}
-					//still a leader
-					//If successful: update nextIndex and matchIndex for follower (§5.3)
-					if reply.Success {
-						rf.nextIndex[server] += len(args.Entries)
-						rf.matchIndex[server] = rf.nextIndex[server] - 1
-						//DPrintf("rf.nextIndex[%v] %v rf.matchIndex[%v] %v", server, rf.nextIndex[server], server, rf.matchIndex[server])
-						//If there exists an N such that N > commitIndex, a majority
-						//of matchIndex[i] ≥ N, and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).
-						N := len(rf.log) - 1
-						//bug1: why it cannot count for itself? because leader dont update it's matchIndex and nextIndex
-						for N > rf.commitIndex {
-							cnt := 0
-							for j := 0; j < len(rf.peers); j++ {
-								if rf.matchIndex[j] >= N && rf.log[N].Term == rf.currentTerm {
-									cnt++
-								}
-								if cnt > len(rf.peers)/2 {
-									rf.commitIndex = N
-									return
-								}
-							}
-							//if cnt > len(rf.peers)/2 {
-							//	rf.commitIndex = N
-							//	break
-							//}
-							N--
-						}
-						DPrintf("%v get commitIndex: %v", rf.me, rf.commitIndex)
-					} else {
-						rf.nextIndex[server]--
-					}
-				}
-			}(i)
+			args := &AppendEntriesArgs{
+				Term:         rf.currentTerm,
+				LeaderId:     rf.me,
+				PrevLogIndex: rf.nextIndex[i] - 1,
+				PrevLogTerm:  rf.log[rf.nextIndex[i]-1].Term,
+				LeaderCommit: rf.commitIndex,
+			}
+			//have new append log
+			if len(rf.log)-1 >= rf.nextIndex[i] {
+				args.Entries = rf.log[rf.nextIndex[i]:]
+			} else {
+				args.Entries = nil
+			}
+			go rf.HandleAppendEntries(i, args)
 		}
+		rf.mu.Unlock()
 		time.Sleep(time.Duration(HeartBeatTimeout) * time.Millisecond)
+	}
+}
+
+func (rf *Raft) HandleAppendEntries(server int, args *AppendEntriesArgs) {
+	reply := &AppendEntriesReply{}
+	ok := rf.SendAppendEntries(server, args, reply)
+	if !ok {
+		return
+	}
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
+	if args.Term != rf.currentTerm {
+		return
+	}
+	//still a leader
+	//If successful: update nextIndex and matchIndex for follower (§5.3)
+	if reply.Success {
+		rf.nextIndex[server] += len(args.Entries)
+		rf.matchIndex[server] = rf.nextIndex[server] - 1
+		//DPrintf("rf.nextIndex[%v] %v rf.matchIndex[%v] %v", server, rf.nextIndex[server], server, rf.matchIndex[server])
+		//If there exists an N such that N > commitIndex, a majority
+		//of matchIndex[i] ≥ N, and log[N].term == currentTerm: set commitIndex = N (§5.3, §5.4).
+		//bug1: why it cannot count for itself? because leader dont update it's matchIndex and nextIndex
+		for N := len(rf.log) - 1; N > rf.commitIndex; N-- {
+			cnt := 1
+			for j := 0; j < len(rf.peers); j++ {
+				if j == rf.me {
+					continue
+				}
+				if rf.matchIndex[j] >= N && rf.log[N].Term == rf.currentTerm {
+					cnt++
+				}
+			}
+			if cnt > len(rf.peers)/2 {
+				rf.commitIndex = N
+				break
+			}
+		}
+		DPrintf("%v get commitIndex: %v", rf.me, rf.commitIndex)
+		return
+	}
+	if reply.Term > rf.currentTerm {
+		rf.currentTerm = reply.Term
+		rf.votedFor = -1
+		rf.state = follower
+		rf.timestamp = time.Now()
+		return
+	}
+	if reply.Term == rf.currentTerm && rf.state == leader {
+		rf.nextIndex[server]--
 	}
 }
 
@@ -223,28 +222,32 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 		rf.state = follower
 	}
 	//bug2 heartbeat will also help update term!
-	//if args.Entries == nil {
-	//	DPrintf("receive heartbeat from %v\n", args.LeaderId)
-	//}
+	if len(args.Entries) == 0 {
+		DPrintf("receive heartbeat from %v\n", args.LeaderId)
+	}
 	if len(rf.log) <= args.PrevLogIndex || rf.log[args.PrevLogIndex].Term != args.PrevLogTerm {
 		DPrintf("AppendEntries failed")
 		reply.Term = rf.currentTerm
 		reply.Success = false
 		return
 	}
-	//if args.Entries != nil {
-	//	i := args.PrevLogIndex + 1
-	//	j := 0
-	//	for len(rf.log) > i && j < len(args.Entries) && rf.log[i].Term == args.Entries[j].Term {
-	//		i++
-	//		j++
-	//	}
-	//	rf.log = rf.log[:i]
-	//	rf.log = append(rf.log, args.Entries[j:]...)
-	//}
-	//directly ignore the conflict and delete the all logs, then append
-	rf.log = rf.log[:args.PrevLogIndex+1]
-	rf.log = append(rf.log, args.Entries...)
+	if args.Entries != nil {
+		for i := 0; i < len(args.Entries); i++ {
+			index := args.PrevLogIndex + 1 + i
+			if index < len(rf.log) && rf.log[index].Term != args.Entries[i].Term {
+				rf.log = rf.log[:index]
+				rf.log = append(rf.log, args.Entries[i:]...)
+				break
+			} else if index == len(rf.log) {
+				rf.log = append(rf.log, args.Entries[i:]...)
+				break
+			}
+		}
+	}
+
+	////directly ignore the conflict and delete the all logs, then append
+	//rf.log = rf.log[:args.PrevLogIndex+1]
+	//rf.log = append(rf.log, args.Entries...)
 
 	reply.Term = rf.currentTerm
 	reply.Success = true
@@ -467,11 +470,10 @@ func (rf *Raft) ticker() {
 
 		if rf.state != leader && time.Since(rf.timestamp) > time.Duration(ElectionTimeout+rd.Intn(150))*time.Millisecond {
 			DPrintf("heartbeat timeout, start elect")
-			rf.mu.Unlock()
 			go rf.elect()
-		} else {
-			rf.mu.Unlock()
 		}
+
+		rf.mu.Unlock()
 		// pause for a random amount of time between 50 and 350
 		// milliseconds.
 		ms := 50 + (rand.Int63() % 300)
@@ -558,11 +560,9 @@ func (rf *Raft) elect() {
 						rf.nextIndex[j] = len(rf.log)
 						rf.matchIndex[j] = 0
 					}
-					rf.mu.Unlock()
 					go rf.SendHeartbeat()
-				} else {
-					rf.mu.Unlock()
 				}
+				rf.mu.Unlock()
 				rf.muVote.Unlock()
 			}
 		}(i, args)
