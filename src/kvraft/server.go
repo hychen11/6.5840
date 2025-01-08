@@ -4,6 +4,7 @@ import (
 	"6.5840/labgob"
 	"6.5840/labrpc"
 	"6.5840/raft"
+	"bytes"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -52,7 +53,8 @@ type KVServer struct {
 	dead    int32 // set by Kill()
 
 	maxraftstate int // snapshot if log grows this big
-
+	persister    *raft.Persister
+	lastApplied  int
 	// Your definitions here.
 	client     map[int64]ReplyState //key clientId, value requestId
 	db         map[string]string
@@ -112,11 +114,6 @@ func (kv *KVServer) HandleOp(args *Op, reply *OpReply) {
 
 func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	// Your code here.
-	_, isLeader := kv.rf.GetState()
-	if !isLeader {
-		reply.Err = ErrWrongLeader
-		return
-	}
 	opArgs := Op{OpType: OpGet, RequestID: args.RequestID, ClientID: args.ClientID, Key: args.Key}
 	res := OpReply{}
 	kv.HandleOp(&opArgs, &res)
@@ -126,11 +123,6 @@ func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 
 func (kv *KVServer) Put(args *PutAppendArgs, reply *PutAppendReply) {
 	// Your code here.
-	_, isLeader := kv.rf.GetState()
-	if !isLeader {
-		reply.Err = ErrWrongLeader
-		return
-	}
 	opArgs := Op{OpType: OpPut, RequestID: args.RequestID, ClientID: args.ClientID, Key: args.Key, Value: args.Value}
 	res := OpReply{}
 	kv.HandleOp(&opArgs, &res)
@@ -139,11 +131,6 @@ func (kv *KVServer) Put(args *PutAppendArgs, reply *PutAppendReply) {
 
 func (kv *KVServer) Append(args *PutAppendArgs, reply *PutAppendReply) {
 	// Your code here.
-	_, isLeader := kv.rf.GetState()
-	if !isLeader {
-		reply.Err = ErrWrongLeader
-		return
-	}
 	opArgs := Op{OpType: OpAppend, RequestID: args.RequestID, ClientID: args.ClientID, Key: args.Key, Value: args.Value}
 	res := OpReply{}
 	kv.HandleOp(&opArgs, &res)
@@ -178,6 +165,13 @@ func (kv *KVServer) applier() {
 			kv.mu.Lock()
 
 			//first check the msg has latest snapshot (4B)
+			//fhis log has already in snapshot!
+			if msg.CommandIndex <= kv.lastApplied {
+				DPrintf("discard the outdated message because the snapshot which lastApplier has been restored")
+				kv.mu.Unlock()
+				continue
+			}
+			kv.lastApplied = msg.CommandIndex
 
 			//second turn msg's command into struct Op
 			op := msg.Command.(Op)
@@ -208,6 +202,21 @@ func (kv *KVServer) applier() {
 			} else {
 				DPrintf("leader %v  find commitChan not exist, may timeout closed", kv.me)
 			}
+
+			kv.mu.Lock()
+			//if just judge kv.persister.RaftStateSize()>=kv.maxraftstate will cause timeout
+			if kv.maxraftstate != -1 && kv.persister.RaftStateSize() >= kv.maxraftstate/100*95 {
+				kv.TakeSnapshot(msg.CommandIndex)
+			}
+			kv.mu.Unlock()
+
+		} else if msg.SnapshotValid {
+			kv.mu.Lock()
+			if msg.SnapshotIndex >= kv.lastApplied {
+				kv.LoadSnapshot(msg.Snapshot)
+				kv.lastApplied = msg.SnapshotIndex
+			}
+			kv.mu.Unlock()
 		}
 	}
 }
@@ -239,6 +248,39 @@ func (kv *KVServer) DBExecute(op *Op) *OpReply {
 	return reply
 }
 
+func (kv *KVServer) TakeSnapshot(index int) {
+	w := new(bytes.Buffer)
+	e := labgob.NewEncoder(w)
+	e.Encode(kv.client)
+	e.Encode(kv.db)
+
+	kvstate := w.Bytes()
+	kv.rf.Snapshot(index, kvstate)
+}
+
+func (kv *KVServer) LoadSnapshot(snapshot []byte) {
+	if snapshot == nil || len(snapshot) == 0 { // bootstrap without any state?
+		return
+	}
+
+	r := bytes.NewBuffer(snapshot)
+	d := labgob.NewDecoder(r)
+
+	//snapshot stores the
+	//client     map[int64]ReplyState //key clientId, value requestId
+	//db         map[string]string
+	var client map[int64]ReplyState
+	var db map[string]string
+	if d.Decode(&client) != nil ||
+		d.Decode(&db) != nil {
+		DPrintf("LoadSnapshot failed\n")
+	} else {
+		kv.client = client
+		kv.db = db
+	}
+	return
+}
+
 // servers[] contains the ports of the set of
 // servers that will cooperate via Raft to
 // form the fault-tolerant key/value service.
@@ -264,11 +306,16 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 
 	kv.applyCh = make(chan raft.ApplyMsg)
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
-
+	kv.persister = persister
+	kv.lastApplied = 0
 	// You may need initialization code here.
 	kv.client = make(map[int64]ReplyState)
 	kv.db = make(map[string]string)
 	kv.commitChan = make(map[int]chan *OpReply)
+
+	kv.mu.Lock()
+	kv.LoadSnapshot(persister.ReadSnapshot())
+	kv.mu.Unlock()
 
 	go kv.applier()
 	return kv

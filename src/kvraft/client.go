@@ -3,6 +3,7 @@ package kvraft
 import (
 	"6.5840/labrpc"
 	"sync"
+	"time"
 )
 import "crypto/rand"
 import "math/big"
@@ -49,18 +50,18 @@ func (ck *Clerk) Get(key string) string {
 		reply := GetReply{}
 		ok := ck.servers[ck.LeaderId].Call("KVServer.Get", &args, &reply)
 		if ok {
-			if reply.Err == ErrWrongLeader || reply.Err == ErrLeaderOutDated {
+			if reply.Err == ErrWrongLeader {
 				ck.nextLeaderId()
-				continue
-			} else if reply.Err == ErrChanClose || reply.Err == ErrTimeout {
-				continue
+			} else if reply.Err == ErrTimeout {
 			} else if reply.Err == ErrNoKey {
 				return reply.Value
+			} else {
+				return reply.Value
 			}
-			return reply.Value
 		} else {
 			ck.nextLeaderId()
 		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
@@ -78,17 +79,17 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 		reply := PutAppendReply{}
 		ok := ck.servers[ck.LeaderId].Call("KVServer."+op, &args, &reply)
 		if ok {
-			if reply.Err == ErrWrongLeader || reply.Err == ErrLeaderOutDated {
+			if reply.Err == ErrWrongLeader {
 				ck.nextLeaderId()
-				continue
-			} else if reply.Err == ErrChanClose || reply.Err == ErrTimeout {
-				continue
+			} else if reply.Err == ErrTimeout {
+			} else {
+				return
 			}
-			return
 		} else {
 			//fuck bug, it rpc has no response, just change leaderId!
 			ck.nextLeaderId()
 		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 

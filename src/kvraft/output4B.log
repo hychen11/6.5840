@@ -1,0 +1,38 @@
+=== RUN   TestSnapshotRPC4B
+Test: InstallSnapshot RPC (4B) ...
+  ... Passed --   3.7  3   317   63
+--- PASS: TestSnapshotRPC4B (3.70s)
+=== RUN   TestSnapshotSize4B
+Test: snapshot size is reasonable (4B) ...
+  ... Passed --  13.7  3  2417  800
+--- PASS: TestSnapshotSize4B (13.70s)
+=== RUN   TestSpeed4B
+Test: ops complete fast enough (4B) ...
+  ... Passed --  17.1  3  3024    0
+--- PASS: TestSpeed4B (17.09s)
+=== RUN   TestSnapshotRecover4B
+Test: restarts, snapshots, one client (4B) ...
+  ... Passed --  19.1  5  4530  878
+--- PASS: TestSnapshotRecover4B (19.13s)
+=== RUN   TestSnapshotRecoverManyClients4B
+Test: restarts, snapshots, many clients (4B) ...
+  ... Passed --  20.1  5 18596 13635
+--- PASS: TestSnapshotRecoverManyClients4B (20.11s)
+=== RUN   TestSnapshotUnreliable4B
+Test: unreliable net, snapshots, many clients (4B) ...
+  ... Passed --  17.2  5  3411  818
+--- PASS: TestSnapshotUnreliable4B (17.25s)
+=== RUN   TestSnapshotUnreliableRecover4B
+Test: unreliable net, restarts, snapshots, many clients (4B) ...
+  ... Passed --  21.3  5  3936  816
+--- PASS: TestSnapshotUnreliableRecover4B (21.26s)
+=== RUN   TestSnapshotUnreliableRecoverConcurrentPartition4B
+Test: unreliable net, restarts, partitions, snapshots, many clients (4B) ...
+  ... Passed --  26.9  5  3444  503
+--- PASS: TestSnapshotUnreliableRecoverConcurrentPartition4B (26.88s)
+=== RUN   TestSnapshotUnreliableRecoverConcurrentPartitionLinearizable4B
+Test: unreliable net, restarts, partitions, snapshots, random keys, many clients (4B) ...
+  ... Passed --  31.4  7  8461 1249
+--- PASS: TestSnapshotUnreliableRecoverConcurrentPartitionLinearizable4B (31.38s)
+PASS
+ok  	6.5840/kvraft	170.815s
