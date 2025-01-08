@@ -1,0 +1,251 @@
+=== RUN   TestBasic4A
+Test: one client (4A) ...
+  ... Passed --  15.1  5  6167 1035
+--- PASS: TestBasic4A (15.11s)
+=== RUN   TestSpeed4A
+Test: ops complete fast enough (4A) ...
+  ... Passed --  14.0  3  4075    0
+--- PASS: TestSpeed4A (14.00s)
+=== RUN   TestConcurrent4A
+Test: many clients (4A) ...
+  ... Passed --  15.5  5  7489 1471
+--- PASS: TestConcurrent4A (15.55s)
+=== RUN   TestUnreliable4A
+Test: unreliable net, many clients (4A) ...
+  ... Passed --  16.3  5  6117 1070
+--- PASS: TestUnreliable4A (16.28s)
+=== RUN   TestUnreliableOneKey4A
+Test: concurrent append to same key, unreliable (4A) ...
+  ... Passed --   0.9  3   227   52
+--- PASS: TestUnreliableOneKey4A (0.94s)
+=== RUN   TestOnePartition4A
+Test: progress in majority (4A) ...
+  ... Passed --   0.3  5    39    2
+Test: no progress in minority (4A) ...
+  ... Passed --   1.0  5   109    3
+Test: completion after heal (4A) ...
+  ... Passed --   1.0  5    64    3
+--- PASS: TestOnePartition4A (2.53s)
+=== RUN   TestManyPartitionsOneClient4A
+Test: partitions, one client (4A) ...
+  ... Passed --  23.0  5  5996  841
+--- PASS: TestManyPartitionsOneClient4A (23.01s)
+=== RUN   TestManyPartitionsManyClients4A
+Test: partitions, many clients (4A) ...
+  ... Passed --  24.2  5 13724 1384
+--- PASS: TestManyPartitionsManyClients4A (24.19s)
+=== RUN   TestPersistOneClient4A
+Test: restarts, one client (4A) ...
+  ... Passed --  19.1  5  8042 1063
+--- PASS: TestPersistOneClient4A (19.12s)
+=== RUN   TestPersistConcurrent4A
+Test: restarts, many clients (4A) ...
+  ... Passed --  19.8  5 14930 1509
+--- PASS: TestPersistConcurrent4A (19.76s)
+=== RUN   TestPersistConcurrentUnreliable4A
+Test: unreliable net, restarts, many clients (4A) ...
+  ... Passed --  20.4  5  6637 1106
+--- PASS: TestPersistConcurrentUnreliable4A (20.43s)
+=== RUN   TestPersistPartition4A
+Test: restarts, partitions, many clients (4A) ...
+  ... Passed --  26.5  5 11374 1272
+--- PASS: TestPersistPartition4A (26.52s)
+=== RUN   TestPersistPartitionUnreliable4A
+Test: unreliable net, restarts, partitions, many clients (4A) ...
+  ... Passed --  27.3  5  6188  830
+--- PASS: TestPersistPartitionUnreliable4A (27.28s)
+=== RUN   TestPersistPartitionUnreliableLinearizable4A
+Test: unreliable net, restarts, partitions, random keys, many clients (4A) ...
+  ... Passed --  29.5  7 13077 1145
+--- PASS: TestPersistPartitionUnreliableLinearizable4A (29.52s)
+PASS
+ok      6.5840/kvraft   255.627s
+(base) ➜  kvraft git:(main) ✗ go test -v -run 4A -race
+=== RUN   TestBasic4A
+Test: one client (4A) ...
+  ... Passed --  15.1  5  5991 1041
+--- PASS: TestBasic4A (15.11s)
+=== RUN   TestSpeed4A
+Test: ops complete fast enough (4A) ...
+  ... Passed --  13.9  3  3842    0
+--- PASS: TestSpeed4A (13.91s)
+=== RUN   TestConcurrent4A
+Test: many clients (4A) ...
+  ... Passed --  15.5  5  8082 1466
+--- PASS: TestConcurrent4A (15.55s)
+=== RUN   TestUnreliable4A
+Test: unreliable net, many clients (4A) ...
+  ... Passed --  16.1  5  5903 1129
+--- PASS: TestUnreliable4A (16.14s)
+=== RUN   TestUnreliableOneKey4A
+Test: concurrent append to same key, unreliable (4A) ...
+  ... Passed --   0.8  3   181   52
+--- PASS: TestUnreliableOneKey4A (0.80s)
+=== RUN   TestOnePartition4A
+Test: progress in majority (4A) ...
+  ... Passed --   0.3  5    41    2
+Test: no progress in minority (4A) ...
+  ... Passed --   1.0  5   110    3
+Test: completion after heal (4A) ...
+  ... Passed --   1.0  5    59    3
+--- PASS: TestOnePartition4A (2.62s)
+=== RUN   TestManyPartitionsOneClient4A
+Test: partitions, one client (4A) ...
+  ... Passed --  23.0  5  6365  976
+--- PASS: TestManyPartitionsOneClient4A (22.97s)
+=== RUN   TestManyPartitionsManyClients4A
+Test: partitions, many clients (4A) ...
+  ... Passed --  22.6  5 13242 1277
+--- PASS: TestManyPartitionsManyClients4A (22.65s)
+=== RUN   TestPersistOneClient4A
+Test: restarts, one client (4A) ...
+  ... Passed --  19.1  5  8424 1064
+--- PASS: TestPersistOneClient4A (19.09s)
+=== RUN   TestPersistConcurrent4A
+Test: restarts, many clients (4A) ...
+  ... Passed --  19.8  5 15198 1498
+--- PASS: TestPersistConcurrent4A (19.76s)
+=== RUN   TestPersistConcurrentUnreliable4A
+Test: unreliable net, restarts, many clients (4A) ...
+  ... Passed --  21.1  5  6732 1136
+--- PASS: TestPersistConcurrentUnreliable4A (21.14s)
+=== RUN   TestPersistPartition4A
+Test: restarts, partitions, many clients (4A) ...
+  ... Passed --  27.0  5 12342 1504
+--- PASS: TestPersistPartition4A (26.99s)
+=== RUN   TestPersistPartitionUnreliable4A
+Test: unreliable net, restarts, partitions, many clients (4A) ...
+  ... Passed --  27.4  5  6496  953
+--- PASS: TestPersistPartitionUnreliable4A (27.41s)
+=== RUN   TestPersistPartitionUnreliableLinearizable4A
+Test: unreliable net, restarts, partitions, random keys, many clients (4A) ...
+  ... Passed --  30.2  7 11727 1184
+--- PASS: TestPersistPartitionUnreliableLinearizable4A (30.25s)
+PASS
+ok      6.5840/kvraft   255.812s
+(base) ➜  kvraft git:(main) ✗ go test -v -run 4A -race
+=== RUN   TestBasic4A
+Test: one client (4A) ...
+  ... Passed --  15.1  5  6094 1025
+--- PASS: TestBasic4A (15.11s)
+=== RUN   TestSpeed4A
+Test: ops complete fast enough (4A) ...
+  ... Passed --  14.5  3  3883    0
+--- PASS: TestSpeed4A (14.53s)
+=== RUN   TestConcurrent4A
+Test: many clients (4A) ...
+  ... Passed --  15.5  5  6717 1453
+--- PASS: TestConcurrent4A (15.54s)
+=== RUN   TestUnreliable4A
+Test: unreliable net, many clients (4A) ...
+  ... Passed --  16.3  5  5979 1090
+--- PASS: TestUnreliable4A (16.34s)
+=== RUN   TestUnreliableOneKey4A
+Test: concurrent append to same key, unreliable (4A) ...
+  ... Passed --   0.8  3   208   52
+--- PASS: TestUnreliableOneKey4A (0.85s)
+=== RUN   TestOnePartition4A
+Test: progress in majority (4A) ...
+  ... Passed --   0.3  5    45    2
+Test: no progress in minority (4A) ...
+  ... Passed --   1.0  5   108    3
+Test: completion after heal (4A) ...
+  ... Passed --   1.0  5    62    3
+--- PASS: TestOnePartition4A (2.60s)
+=== RUN   TestManyPartitionsOneClient4A
+Test: partitions, one client (4A) ...
+  ... Passed --  22.7  5  6510  998
+--- PASS: TestManyPartitionsOneClient4A (22.72s)
+=== RUN   TestManyPartitionsManyClients4A
+Test: partitions, many clients (4A) ...
+  ... Passed --  23.1  5 11338 1289
+--- PASS: TestManyPartitionsManyClients4A (23.08s)
+=== RUN   TestPersistOneClient4A
+Test: restarts, one client (4A) ...
+  ... Passed --  19.1  5  8319 1065
+--- PASS: TestPersistOneClient4A (19.15s)
+=== RUN   TestPersistConcurrent4A
+Test: restarts, many clients (4A) ...
+  ... Passed --  20.0  5 16003 1481
+--- PASS: TestPersistConcurrent4A (19.99s)
+=== RUN   TestPersistConcurrentUnreliable4A
+Test: unreliable net, restarts, many clients (4A) ...
+  ... Passed --  20.3  5  6617 1124
+--- PASS: TestPersistConcurrentUnreliable4A (20.34s)
+=== RUN   TestPersistPartition4A
+Test: restarts, partitions, many clients (4A) ...
+  ... Passed --  27.1  5 10957 1023
+--- PASS: TestPersistPartition4A (27.10s)
+=== RUN   TestPersistPartitionUnreliable4A
+Test: unreliable net, restarts, partitions, many clients (4A) ...
+  ... Passed --  27.8  5  5837  709
+--- PASS: TestPersistPartitionUnreliable4A (27.76s)
+=== RUN   TestPersistPartitionUnreliableLinearizable4A
+Test: unreliable net, restarts, partitions, random keys, many clients (4A) ...
+  ... Passed --  30.7  7 11129 1031
+--- PASS: TestPersistPartitionUnreliableLinearizable4A (30.74s)
+PASS
+ok      6.5840/kvraft   257.250s
+(base) ➜  kvraft git:(main) ✗ go test -v -run 4A -race
+=== RUN   TestBasic4A
+Test: one client (4A) ...
+  ... Passed --  15.1  5  6069 1025
+--- PASS: TestBasic4A (15.11s)
+=== RUN   TestSpeed4A
+Test: ops complete fast enough (4A) ...
+  ... Passed --  13.9  3  3954    0
+--- PASS: TestSpeed4A (13.93s)
+=== RUN   TestConcurrent4A
+Test: many clients (4A) ...
+  ... Passed --  15.5  5  8396 1472
+--- PASS: TestConcurrent4A (15.52s)
+=== RUN   TestUnreliable4A
+Test: unreliable net, many clients (4A) ...
+  ... Passed --  15.8  5  5903 1111
+--- PASS: TestUnreliable4A (15.85s)
+=== RUN   TestUnreliableOneKey4A
+Test: concurrent append to same key, unreliable (4A) ...
+  ... Passed --   0.8  3   195   52
+--- PASS: TestUnreliableOneKey4A (0.77s)
+=== RUN   TestOnePartition4A
+Test: progress in majority (4A) ...
+  ... Passed --   0.4  5    56    2
+Test: no progress in minority (4A) ...
+  ... Passed --   1.0  5   111    3
+Test: completion after heal (4A) ...
+  ... Passed --   1.0  5    59    3
+--- PASS: TestOnePartition4A (2.66s)
+=== RUN   TestManyPartitionsOneClient4A
+Test: partitions, one client (4A) ...
+  ... Passed --  23.0  5  7835  965
+--- PASS: TestManyPartitionsOneClient4A (23.00s)
+=== RUN   TestManyPartitionsManyClients4A
+Test: partitions, many clients (4A) ...
+  ... Passed --  23.1  5 12336 1406
+--- PASS: TestManyPartitionsManyClients4A (23.09s)
+=== RUN   TestPersistOneClient4A
+Test: restarts, one client (4A) ...
+  ... Passed --  19.2  5  8903 1062
+--- PASS: TestPersistOneClient4A (19.20s)
+=== RUN   TestPersistConcurrent4A
+Test: restarts, many clients (4A) ...
+  ... Passed --  19.7  5 14653 1492
+--- PASS: TestPersistConcurrent4A (19.72s)
+=== RUN   TestPersistConcurrentUnreliable4A
+Test: unreliable net, restarts, many clients (4A) ...
+  ... Passed --  20.4  5  6722 1122
+--- PASS: TestPersistConcurrentUnreliable4A (20.45s)
+=== RUN   TestPersistPartition4A
+Test: restarts, partitions, many clients (4A) ...
+  ... Passed --  26.9  5 11652 1091
+--- PASS: TestPersistPartition4A (26.94s)
+=== RUN   TestPersistPartitionUnreliable4A
+Test: unreliable net, restarts, partitions, many clients (4A) ...
+  ... Passed --  27.7  5  6164  971
+--- PASS: TestPersistPartitionUnreliable4A (27.73s)
+=== RUN   TestPersistPartitionUnreliableLinearizable4A
+Test: unreliable net, restarts, partitions, random keys, many clients (4A) ...
+  ... Passed --  30.4  7 12487 1236
+--- PASS: TestPersistPartitionUnreliableLinearizable4A (30.38s)
+PASS
+ok      6.5840/kvraft   255.734s
