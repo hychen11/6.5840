@@ -1,0 +1,42 @@
+=== RUN   TestBasicAgree3B
+Test (3B): basic agreement ...
+  ... Passed --   0.9  3   16    4212    3
+--- PASS: TestBasicAgree3B (0.94s)
+=== RUN   TestRPCBytes3B
+Test (3B): RPC byte count ...
+  ... Passed --   2.5  3   48  113344   11
+--- PASS: TestRPCBytes3B (2.51s)
+=== RUN   TestFollowerFailure3B
+Test (3B): test progressive failure of followers ...
+  ... Passed --   4.7  3  124   24291    3
+--- PASS: TestFollowerFailure3B (4.72s)
+=== RUN   TestLeaderFailure3B
+Test (3B): test failure of leaders ...
+  ... Passed --   5.1  3  190   38650    3
+--- PASS: TestLeaderFailure3B (5.08s)
+=== RUN   TestFailAgree3B
+Test (3B): agreement after follower reconnects ...
+  ... Passed --   5.9  3  128   31700    8
+--- PASS: TestFailAgree3B (5.90s)
+=== RUN   TestFailNoAgree3B
+Test (3B): no agreement if too many followers disconnect ...
+  ... Passed --   3.7  5  216   41654    3
+--- PASS: TestFailNoAgree3B (3.71s)
+=== RUN   TestConcurrentStarts3B
+Test (3B): concurrent Start()s ...
+  ... Passed --   0.6  3   12    3160    6
+--- PASS: TestConcurrentStarts3B (0.64s)
+=== RUN   TestRejoin3B
+Test (3B): rejoin of partitioned leader ...
+  ... Passed --   6.4  3  186   42851    4
+--- PASS: TestRejoin3B (6.41s)
+=== RUN   TestBackup3B
+Test (3B): leader backs up quickly over incorrect follower logs ...
+  ... Passed --  27.1  5 2288 1643732  102
+--- PASS: TestBackup3B (27.09s)
+=== RUN   TestCount3B
+Test (3B): RPC counts aren't too high ...
+  ... Passed --   2.2  3   40   10980   12
+--- PASS: TestCount3B (2.20s)
+PASS
+ok  	6.5840/raft	59.509s

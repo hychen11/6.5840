@@ -7,8 +7,10 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
+const HandleOpTimeOut = 500 * time.Millisecond
 const Debug = false
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
@@ -18,11 +20,28 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 	return
 }
 
+type OpType int
+
+const (
+	OpGet OpType = iota
+	OpPut
+	OpAppend
+)
 
 type Op struct {
 	// Your definitions here.
 	// Field names must start with capital letters,
 	// otherwise RPC will break.
+	OpType    OpType
+	Key       string
+	Value     string
+	RequestID int64
+	ClientID  int64
+}
+
+type ReplyState struct {
+	LastRequestId int64
+	LastReply     *OpReply
 }
 
 type KVServer struct {
@@ -35,19 +54,100 @@ type KVServer struct {
 	maxraftstate int // snapshot if log grows this big
 
 	// Your definitions here.
+	client     map[int64]ReplyState //key clientId, value requestId
+	db         map[string]string
+	commitChan map[int]chan *OpReply //key startIndex, value result
 }
 
+type OpReply struct {
+	RequestId int64
+	Err       Err
+	Value     string
+}
+
+func (kv *KVServer) HandleOp(args *Op, reply *OpReply) {
+	//check if duplicated
+	kv.mu.Lock()
+	state, exist := kv.client[args.ClientID]
+	if args.OpType != OpGet && exist && args.RequestID <= state.LastRequestId {
+		DPrintf("HandleOp: server %v have duplicate operation on Put & Append: args.RequestID <= state.LastRequestId", kv.me)
+		reply = state.LastReply
+		kv.mu.Unlock()
+		return
+	}
+	kv.mu.Unlock()
+
+	index, _, isLeader := kv.rf.Start(*args)
+	if !isLeader {
+		reply.Err = ErrWrongLeader
+		return
+	}
+
+	kv.mu.Lock()
+	if _, ok := kv.commitChan[index]; !ok {
+		DPrintf("HandleOp: commitChann %v not exists", index)
+		kv.commitChan[index] = make(chan *OpReply)
+	}
+	ch := kv.commitChan[index]
+	kv.mu.Unlock()
+
+	defer func() {
+		kv.mu.Lock()
+		close(ch)
+		delete(kv.commitChan, index)
+		kv.mu.Unlock()
+	}()
+
+	select {
+	case result := <-ch:
+		reply.Value = result.Value
+		reply.Err = result.Err
+		return
+	case <-time.After(HandleOpTimeOut):
+		reply.Err = ErrTimeout
+		return
+	}
+
+}
 
 func (kv *KVServer) Get(args *GetArgs, reply *GetReply) {
 	// Your code here.
+	_, isLeader := kv.rf.GetState()
+	if !isLeader {
+		reply.Err = ErrWrongLeader
+		return
+	}
+	opArgs := Op{OpType: OpGet, RequestID: args.RequestID, ClientID: args.ClientID, Key: args.Key}
+	res := OpReply{}
+	kv.HandleOp(&opArgs, &res)
+	reply.Err = res.Err
+	reply.Value = res.Value
 }
 
 func (kv *KVServer) Put(args *PutAppendArgs, reply *PutAppendReply) {
 	// Your code here.
+	_, isLeader := kv.rf.GetState()
+	if !isLeader {
+		reply.Err = ErrWrongLeader
+		return
+	}
+	opArgs := Op{OpType: OpPut, RequestID: args.RequestID, ClientID: args.ClientID, Key: args.Key, Value: args.Value}
+	res := OpReply{}
+	kv.HandleOp(&opArgs, &res)
+	reply.Err = res.Err
 }
 
 func (kv *KVServer) Append(args *PutAppendArgs, reply *PutAppendReply) {
 	// Your code here.
+	_, isLeader := kv.rf.GetState()
+	if !isLeader {
+		reply.Err = ErrWrongLeader
+		return
+	}
+	opArgs := Op{OpType: OpAppend, RequestID: args.RequestID, ClientID: args.ClientID, Key: args.Key, Value: args.Value}
+	res := OpReply{}
+	kv.HandleOp(&opArgs, &res)
+	reply.Err = res.Err
 }
 
 // the tester calls Kill() when a KVServer instance won't
@@ -67,6 +167,76 @@ func (kv *KVServer) Kill() {
 func (kv *KVServer) killed() bool {
 	z := atomic.LoadInt32(&kv.dead)
 	return z == 1
+}
+
+// to apply the committed entries to state machine!
+func (kv *KVServer) applier() {
+	for !kv.killed() {
+		msg := <-kv.applyCh
+		DPrintf("applier receive apply messahe %v", msg)
+		if msg.CommandValid {
+			kv.mu.Lock()
+
+			//first check the msg has latest snapshot (4B)
+
+			//second turn msg's command into struct Op
+			op := msg.Command.(Op)
+			requestId := op.RequestID
+			clientId := op.ClientID
+			//check if it is old requset
+			var res *OpReply
+			state, exist := kv.client[clientId]
+			if op.OpType != OpGet && exist && requestId <= state.LastRequestId {
+				//old just return old result directly
+				res = state.LastReply
+			} else {
+				// if new just apply to statemachine!
+				res = kv.DBExecute(&op)
+				if op.OpType != OpGet {
+					//record reply
+					kv.client[clientId] = ReplyState{LastRequestId: requestId, LastReply: res}
+				}
+			}
+			_, isLeader := kv.rf.GetState()
+			ch, exist := kv.commitChan[msg.CommandIndex]
+			kv.mu.Unlock()
+
+			if isLeader && exist {
+				ch <- res
+			} else if !isLeader {
+				DPrintf("Not leader, no need to send commitChan")
+			} else {
+				DPrintf("leader %v  find commitChan not exist, may timeout closed", kv.me)
+			}
+		}
+	}
+}
+
+func (kv *KVServer) DBExecute(op *Op) *OpReply {
+	reply := &OpReply{}
+	reply.RequestId = op.RequestID
+	switch op.OpType {
+	case OpGet:
+		if value, exist := kv.db[op.Key]; exist {
+			reply.Value = value
+			reply.Err = OK
+		} else {
+			reply.Value = ""
+			reply.Err = ErrNoKey
+		}
+	case OpPut:
+		kv.db[op.Key] = op.Value
+		reply.Err = OK
+	case OpAppend:
+		val, exist := kv.db[op.Key]
+		if !exist {
+			kv.db[op.Key] = op.Value
+		} else {
+			kv.db[op.Key] = val + op.Value
+		}
+		reply.Err = OK
+	}
+	return reply
 }
 
 // servers[] contains the ports of the set of
@@ -96,6 +266,10 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
 
 	// You may need initialization code here.
+	kv.client = make(map[int64]ReplyState)
+	kv.db = make(map[string]string)
+	kv.commitChan = make(map[int]chan *OpReply)
 
+	go kv.applier()
 	return kv
 }

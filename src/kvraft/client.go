@@ -1,12 +1,18 @@
 package kvraft
 
-import "6.5840/labrpc"
+import (
+	"6.5840/labrpc"
+	"sync"
+)
 import "crypto/rand"
 import "math/big"
 
-
 type Clerk struct {
-	servers []*labrpc.ClientEnd
+	servers   []*labrpc.ClientEnd
+	RequestID int64
+	ClientID  int64
+	LeaderId  int
+	mu        sync.Mutex
 	// You will have to modify this struct.
 }
 
@@ -20,6 +26,9 @@ func nrand() int64 {
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.servers = servers
+	ck.RequestID = 0
+	ck.ClientID = nrand()
+	ck.LeaderId = 0
 	// You'll have to add code here.
 	return ck
 }
@@ -35,9 +44,24 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 // must match the declared types of the RPC handler function's
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) Get(key string) string {
-
-	// You will have to modify this function.
-	return ""
+	args := GetArgs{Key: key, RequestID: ck.nextRequestId(), ClientID: ck.ClientID}
+	for {
+		reply := GetReply{}
+		ok := ck.servers[ck.LeaderId].Call("KVServer.Get", &args, &reply)
+		if ok {
+			if reply.Err == ErrWrongLeader || reply.Err == ErrLeaderOutDated {
+				ck.nextLeaderId()
+				continue
+			} else if reply.Err == ErrChanClose || reply.Err == ErrTimeout {
+				continue
+			} else if reply.Err == ErrNoKey {
+				return reply.Value
+			}
+			return reply.Value
+		} else {
+			ck.nextLeaderId()
+		}
+	}
 }
 
 // shared by Put and Append.
@@ -49,7 +73,23 @@ func (ck *Clerk) Get(key string) string {
 // must match the declared types of the RPC handler function's
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) PutAppend(key string, value string, op string) {
-	// You will have to modify this function.
+	args := PutAppendArgs{Key: key, Value: value, RequestID: ck.nextRequestId(), ClientID: ck.ClientID}
+	for {
+		reply := PutAppendReply{}
+		ok := ck.servers[ck.LeaderId].Call("KVServer."+op, &args, &reply)
+		if ok {
+			if reply.Err == ErrWrongLeader || reply.Err == ErrLeaderOutDated {
+				ck.nextLeaderId()
+				continue
+			} else if reply.Err == ErrChanClose || reply.Err == ErrTimeout {
+				continue
+			}
+			return
+		} else {
+			//fuck bug, it rpc has no response, just change leaderId!
+			ck.nextLeaderId()
+		}
+	}
 }
 
 func (ck *Clerk) Put(key string, value string) {
@@ -57,4 +97,19 @@ func (ck *Clerk) Put(key string, value string) {
 }
 func (ck *Clerk) Append(key string, value string) {
 	ck.PutAppend(key, value, "Append")
+}
+
+func (ck *Clerk) nextRequestId() int64 {
+	ck.mu.Lock()
+	defer ck.mu.Unlock()
+	ck.RequestID++
+	return ck.RequestID
+}
+
+func (ck *Clerk) nextLeaderId() int {
+	ck.mu.Lock()
+	defer ck.mu.Unlock()
+	ck.LeaderId++
+	ck.LeaderId = ck.LeaderId % len(ck.servers)
+	return ck.LeaderId
 }
